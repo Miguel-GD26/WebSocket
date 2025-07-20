@@ -1,208 +1,236 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat en Vivo</title>
-    <style>
-        :root {
-            --bg-color: #f0f0f0;
-            --text-color: #222;
-            --chat-bg: #ffffff;
-            --msg-bg: #e4e4e4;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat en Tiempo Real con Go</title>
+  <style>
+    :root {
+      --bg: #f4f4f9;
+      --text: #222;
+      --chat-bg: #fff;
+      --my-msg: #dcf8c6;
+      --other-msg: #eaeaea;
+      --system: #888;
+    }
 
-        .dark-mode {
-            --bg-color: #1d1d1d;
-            --text-color: #f9f9f9;
-            --chat-bg: #2b2b2b;
-            --msg-bg: #3a3a3a;
-        }
+    .dark-mode {
+      --bg: #1e1e1e;
+      --text: #f0f0f0;
+      --chat-bg: #2c2c2c;
+      --my-msg: #3e7f58;
+      --other-msg: #444;
+      --system: #aaa;
+    }
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-        .container {
-            max-width: 600px;
-            margin: auto;
-            padding: 1em;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
+    h2 {
+      text-align: center;
+      margin: 20px 0;
+    }
 
-        h2 {
-            text-align: center;
-        }
+    #login-container,
+    #chat-container {
+      max-width: 600px;
+      margin: auto;
+      padding: 1em;
+    }
 
-        .chat-container {
-            flex-grow: 1;
-            overflow-y: auto;
-            background: var(--chat-bg);
-            padding: 1em;
-            border-radius: 10px;
-            margin-top: 1em;
-            max-height: 60vh;
-        }
+    #chat-window {
+      border: 1px solid #ccc;
+      height: 400px;
+      overflow-y: auto;
+      background-color: var(--chat-bg);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
 
-        .message {
-            background-color: var(--msg-bg);
-            margin: 0.4em 0;
-            padding: 0.6em 1em;
-            border-radius: 6px;
-            word-wrap: break-word;
-        }
+    .message {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 5px;
+    }
 
-        .message strong {
-            color: var(--text-color);
-        }
+    .my-message {
+      background-color: var(--my-msg);
+      text-align: right;
+    }
 
-        .message em {
-            color: gray;
-            font-size: 0.9em;
-        }
+    .other-message {
+      background-color: var(--other-msg);
+    }
 
-        .form-row {
-            display: flex;
-            gap: 0.5em;
-            margin-top: 1em;
-        }
+    .system-message {
+      text-align: center;
+      font-style: italic;
+      color: var(--system);
+      font-size: 0.9em;
+    }
 
-        input[type="text"] {
-            flex: 1;
-            padding: 0.6em;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
+    .meta {
+      font-size: 0.8em;
+      color: var(--system);
+    }
 
-        button {
-            padding: 0.6em 1em;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+    .content {
+      margin-top: 4px;
+    }
 
-        button:hover {
-            background: #0056b3;
-        }
+    form {
+      display: flex;
+      gap: 10px;
+    }
 
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
 
-        .toggle-dark {
-            background: none;
-            border: 1px solid var(--text-color);
-            color: var(--text-color);
-            padding: 0.4em 0.8em;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+    button {
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-        @media (max-width: 600px) {
-            .form-row {
-                flex-direction: column;
-            }
+    button:hover {
+      background-color: #0056b3;
+    }
 
-            .form-row button {
-                width: 100%;
-            }
-        }
-    </style>
+    #mode-toggle {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      cursor: pointer;
+      background: none;
+      border: 1px solid var(--text);
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 1em;
+      color: var(--text);
+    }
+
+    @media (max-width: 600px) {
+      form {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="top-bar">
-            <h2>Chat en Vivo</h2>
-            <button class="toggle-dark" onclick="toggleDarkMode()">🌗</button>
-        </div>
-        <div id="chat" class="chat-container"></div>
-        <form id="messageForm" class="form-row">
-            <input type="text" id="messageInput" placeholder="Escribe un mensaje..." autocomplete="off">
-            <button type="submit">Enviar</button>
-        </form>
-    </div>
+  <button id="mode-toggle">🌙</button>
 
-    <script>
-        let username = null;
-        while (!username || username.trim() === "") {
-            username = prompt("Ingresa tu nombre de usuario:");
-        }
+  <div id="login-container">
+    <h2>Bienvenido al Chat</h2>
+    <input type="text" id="username" placeholder="Elige un nombre de usuario" required />
+    <button onclick="joinChat()">Unirse al Chat</button>
+  </div>
 
-        const socket = new WebSocket("ws://localhost:8080/ws");
+  <div id="chat-container" style="display: none;">
+    <h2>Chat en Tiempo Real</h2>
+    <div id="chat-window"></div>
+    <form id="form" onsubmit="sendMessage(event)">
+      <input type="text" id="message" placeholder="Escribe un mensaje..." autocomplete="off" required />
+      <button>Enviar</button>
+    </form>
+  </div>
 
-        const chat = document.getElementById("chat");
-        const form = document.getElementById("messageForm");
-        const input = document.getElementById("messageInput");
+  <script>
+    let ws;
+    let username = "";
+    const chatWindow = document.getElementById("chat-window");
+    const messageInput = document.getElementById("message");
+    const loginContainer = document.getElementById("login-container");
+    const chatContainer = document.getElementById("chat-container");
+    const modeToggle = document.getElementById("mode-toggle");
 
-        socket.onopen = () => {
-            socket.send(JSON.stringify({ type: "user_join", username: username }));
+    modeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      modeToggle.textContent = document.body.classList.contains("dark-mode") ? "🌞" : "🌙";
+    });
+
+    function joinChat() {
+      const usernameInput = document.getElementById("username");
+      username = usernameInput.value.trim();
+      if (!username) {
+        alert("Por favor, introduce un nombre de usuario.");
+        return;
+      }
+
+      loginContainer.style.display = "none";
+      chatContainer.style.display = "block";
+
+      connectWebSocket();
+    }
+
+    function connectWebSocket() {
+      if (window.WebSocket) {
+        const host = window.location.host;
+        ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(username)}`);
+
+        ws.onopen = () => console.log("WebSocket conectado.");
+
+        ws.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+          const messageElement = document.createElement("div");
+          messageElement.classList.add("message");
+
+          if (msg.type === "chat_message") {
+            messageElement.classList.add(msg.username === username ? "my-message" : "other-message");
+            messageElement.innerHTML = `
+              <div class="meta">${msg.username} - ${new Date(msg.timestamp).toLocaleTimeString()}</div>
+              <div class="content">${msg.messageContent}</div>
+            `;
+          } else if (msg.type === "user_join" || msg.type === "user_leave") {
+            messageElement.classList.add("system-message");
+            messageElement.textContent = `🔔 ${msg.username} ${msg.messageContent}`;
+          }
+
+          chatWindow.appendChild(messageElement);
+          chatWindow.scrollTop = chatWindow.scrollHeight;
         };
 
-        socket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                mostrarMensaje(data);
-            } catch (e) {
-                console.error("Error al analizar JSON:", e);
-            }
-        };
+        ws.onclose = () => addSystemMessage("⚠️ Te has desconectado. Refresca la página.");
+        ws.onerror = (err) => addSystemMessage("❌ Error de conexión.");
+      } else {
+        alert("Tu navegador no soporta WebSockets.");
+      }
+    }
 
-        function mostrarMensaje(data) {
-            const div = document.createElement("div");
-            div.classList.add("message");
+    function sendMessage(event) {
+      event.preventDefault();
+      const messageContent = messageInput.value.trim();
+      if (messageContent && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ messageContent }));
+        messageInput.value = "";
+      }
+    }
 
-            const hora = new Date(data.timestamp || Date.now()).toLocaleTimeString();
-
-            if (data.type === "user_join") {
-                div.innerHTML = `<em>🔔 ${data.username} se ha unido al chat</em>`;
-            } else if (data.type === "user_leave") {
-                div.innerHTML = `<em>👋 ${data.username} salió del chat</em>`;
-            } else if (data.type === "message") {
-                div.innerHTML = `<strong>${data.username}</strong> <small>${hora}</small><br>${data.messageContent}`;
-            } else {
-                div.innerText = "[Mensaje desconocido]";
-            }
-
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
-        }
-
-        form.addEventListener("submit", function (e) {
-            e.preventDefault();
-            const msg = input.value.trim();
-            if (!msg) return;
-
-            const data = {
-                type: "message",
-                username: username,
-                messageContent: msg,
-                timestamp: new Date().toISOString()
-            };
-
-            socket.send(JSON.stringify(data));
-            input.value = "";
-        });
-
-        window.addEventListener("beforeunload", () => {
-            socket.send(JSON.stringify({ type: "user_leave", username: username }));
-        });
-
-        function toggleDarkMode() {
-            document.body.classList.toggle("dark-mode");
-        }
-    </script>
+    function addSystemMessage(text) {
+      const messageElement = document.createElement("div");
+      messageElement.classList.add("message", "system-message");
+      messageElement.textContent = text;
+      chatWindow.appendChild(messageElement);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+  </script>
 </body>
 </html>

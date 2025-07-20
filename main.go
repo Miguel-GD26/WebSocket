@@ -4,7 +4,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -56,14 +55,7 @@ func main() {
 	})
 
 	log.Println("Servidor de Chat iniciado en http://localhost:8080")
-	// err := http.ListenAndServe(":8080", nil)
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	log.Println("Servidor iniciado en http://localhost:" + port)
-	err := http.ListenAndServe(":"+port, nil)
-
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("Error fatal al iniciar servidor: %v", err)
 	}
