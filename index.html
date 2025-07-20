@@ -3,186 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat WebSocket</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+    <title>Chat en Vivo</title>
     <style>
         :root {
-            --bg-light: #f5f5f5;
-            --text-light: #222;
-            --bg-dark: #121212;
-            --text-dark: #eee;
-            --primary: #4f46e5;
+            --bg-color: #f0f0f0;
+            --text-color: #222;
+            --chat-bg: #ffffff;
+            --msg-bg: #e4e4e4;
+        }
+
+        .dark-mode {
+            --bg-color: #1d1d1d;
+            --text-color: #f9f9f9;
+            --chat-bg: #2b2b2b;
+            --msg-bg: #3a3a3a;
         }
 
         body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-light);
-            color: var(--text-light);
+            padding: 0;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            transition: background 0.3s, color 0.3s;
+            min-height: 100vh;
         }
 
-        body.dark {
-            background-color: var(--bg-dark);
-            color: var(--text-dark);
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 1em;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
         }
 
-        header {
-            background: var(--primary);
+        h2 {
+            text-align: center;
+        }
+
+        .chat-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: var(--chat-bg);
+            padding: 1em;
+            border-radius: 10px;
+            margin-top: 1em;
+            max-height: 60vh;
+        }
+
+        .message {
+            background-color: var(--msg-bg);
+            margin: 0.4em 0;
+            padding: 0.6em 1em;
+            border-radius: 6px;
+            word-wrap: break-word;
+        }
+
+        .message strong {
+            color: var(--text-color);
+        }
+
+        .message em {
+            color: gray;
+            font-size: 0.9em;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 0.5em;
+            margin-top: 1em;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.6em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 0.6em 1em;
+            background: #007bff;
             color: white;
-            padding: 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .toggle-theme {
+        .toggle-dark {
             background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
+            border: 1px solid var(--text-color);
+            color: var(--text-color);
+            padding: 0.4em 0.8em;
+            border-radius: 5px;
             cursor: pointer;
         }
 
-        .container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 1rem;
-            max-width: 600px;
-            margin: auto;
-        }
-
-        #messages {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .message {
-            padding: 0.6rem 1rem;
-            border-radius: 10px;
-            max-width: 80%;
-        }
-
-        .message.you {
-            align-self: flex-end;
-            background-color: #4f46e5;
-            color: white;
-        }
-
-        .message.other {
-            align-self: flex-start;
-            background-color: #e4e4e4;
-        }
-
-        body.dark .message.other {
-            background-color: #333;
-            color: white;
-        }
-
-        form {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        input, button {
-            padding: 0.5rem;
-            font-size: 1rem;
-        }
-
-        #usernameInput {
-            width: 100%;
-            margin-bottom: 1rem;
-        }
-
         @media (max-width: 600px) {
-            .container {
-                padding: 0.5rem;
+            .form-row {
+                flex-direction: column;
             }
 
-            form {
-                flex-direction: column;
+            .form-row button {
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
-    <header>
-        <span>💬 Chat WebSocket</span>
-        <button class="toggle-theme" id="toggleTheme">🌙</button>
-    </header>
-
     <div class="container">
-        <input type="text" id="usernameInput" placeholder="Ingresa tu nombre de usuario" />
-        <div id="messages"></div>
-        <form id="chatForm">
-            <input type="text" id="messageInput" autocomplete="off" placeholder="Escribe un mensaje..." required />
+        <div class="top-bar">
+            <h2>Chat en Vivo</h2>
+            <button class="toggle-dark" onclick="toggleDarkMode()">🌗</button>
+        </div>
+        <div id="chat" class="chat-container"></div>
+        <form id="messageForm" class="form-row">
+            <input type="text" id="messageInput" placeholder="Escribe un mensaje..." autocomplete="off">
             <button type="submit">Enviar</button>
         </form>
     </div>
 
     <script>
-        const body = document.body;
-        const toggleBtn = document.getElementById('toggleTheme');
-        const usernameInput = document.getElementById('usernameInput');
-        const messagesDiv = document.getElementById('messages');
-        const chatForm = document.getElementById('chatForm');
-        const messageInput = document.getElementById('messageInput');
-
-        let ws;
-        let username = "";
-
-        toggleBtn.addEventListener('click', () => {
-            body.classList.toggle('dark');
-            toggleBtn.textContent = body.classList.contains('dark') ? '☀️' : '🌙';
-        });
-
-        chatForm.addEventListener('submit', e => {
-            e.preventDefault();
-            if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-            const text = messageInput.value.trim();
-            if (text !== "") {
-                ws.send(text);
-                addMessage(text, 'you');
-                messageInput.value = '';
-            }
-        });
-
-        usernameInput.addEventListener('change', () => {
-            username = usernameInput.value.trim();
-            if (username !== "") {
-                connectWebSocket(username);
-                usernameInput.disabled = true;
-            }
-        });
-
-        function connectWebSocket(username) {
-            ws = new WebSocket(`wss://${location.host}/ws?username=${encodeURIComponent(username)}`);
-
-            ws.onmessage = e => {
-                const msg = e.data;
-                addMessage(msg, 'other');
-            };
-
-            ws.onclose = () => {
-                addMessage("🔌 Conexión cerrada", 'other');
-            };
+        let username = null;
+        while (!username || username.trim() === "") {
+            username = prompt("Ingresa tu nombre de usuario:");
         }
 
-        function addMessage(text, type) {
-            const div = document.createElement('div');
-            div.classList.add('message', type);
-            div.textContent = text;
-            messagesDiv.appendChild(div);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        const socket = new WebSocket("ws://localhost:8080/ws");
+
+        const chat = document.getElementById("chat");
+        const form = document.getElementById("messageForm");
+        const input = document.getElementById("messageInput");
+
+        socket.onopen = () => {
+            socket.send(JSON.stringify({ type: "user_join", username: username }));
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                mostrarMensaje(data);
+            } catch (e) {
+                console.error("Error al analizar JSON:", e);
+            }
+        };
+
+        function mostrarMensaje(data) {
+            const div = document.createElement("div");
+            div.classList.add("message");
+
+            const hora = new Date(data.timestamp || Date.now()).toLocaleTimeString();
+
+            if (data.type === "user_join") {
+                div.innerHTML = `<em>🔔 ${data.username} se ha unido al chat</em>`;
+            } else if (data.type === "user_leave") {
+                div.innerHTML = `<em>👋 ${data.username} salió del chat</em>`;
+            } else if (data.type === "message") {
+                div.innerHTML = `<strong>${data.username}</strong> <small>${hora}</small><br>${data.messageContent}`;
+            } else {
+                div.innerText = "[Mensaje desconocido]";
+            }
+
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const data = {
+                type: "message",
+                username: username,
+                messageContent: msg,
+                timestamp: new Date().toISOString()
+            };
+
+            socket.send(JSON.stringify(data));
+            input.value = "";
+        });
+
+        window.addEventListener("beforeunload", () => {
+            socket.send(JSON.stringify({ type: "user_leave", username: username }));
+        });
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
         }
     </script>
 </body>
