@@ -62,7 +62,8 @@
     function connectWebSocket() {
         if (window.WebSocket) {
             const host = window.location.host;
-            ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(username)}`);
+            //ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(username)}`);
+            new WebSocket("wss://https://websocket-qamw.onrender.com/ws?username=TuNombre");
 
             ws.onopen = function(event) {
                 console.log("Conexión WebSocket establecida.");
