@@ -1,4 +1,3 @@
-// hub.go
 package main
 
 import (
@@ -31,14 +30,13 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			// Primero, registra al cliente en el mapa
+
 			h.clientsRWMutex.Lock()
 			h.clients[client] = true
 			h.clientsRWMutex.Unlock()
 
 			log.Printf("Cliente %s conectado.", client.username)
 
-			// Luego, crea el mensaje de unión
 			joinMsg := Message{
 				Type:           "user_join",
 				Username:       client.username,
@@ -46,19 +44,18 @@ func (h *Hub) run() {
 				Timestamp:      time.Now(),
 			}
 			jsonMsg, _ := json.Marshal(joinMsg)
-			// Envía el mensaje de unión al canal de broadcast para que TODOS lo reciban
+
 			h.broadcast <- jsonMsg
 
 		case client := <-h.unregister:
-			// Solo si el cliente aún existe
+
 			h.clientsRWMutex.Lock()
 			if _, ok := h.clients[client]; ok {
-				// Elimina al cliente
+
 				delete(h.clients, client)
 				close(client.send)
 				log.Printf("Cliente %s desconectado.", client.username)
 
-				// Crea el mensaje de desconexión
 				leaveMsg := Message{
 					Type:           "user_leave",
 					Username:       client.username,
@@ -66,19 +63,19 @@ func (h *Hub) run() {
 					Timestamp:      time.Now(),
 				}
 				jsonMsg, _ := json.Marshal(leaveMsg)
-				// Envía el mensaje de desconexión al canal de broadcast
+
 				h.broadcast <- jsonMsg
 			}
 			h.clientsRWMutex.Unlock()
 
 		case message := <-h.broadcast:
-			// Esta lógica se mantiene igual.
+
 			h.clientsRWMutex.RLock()
 			for client := range h.clients {
 				select {
 				case client.send <- message:
 				default:
-					// Si el canal está bloqueado, cerramos la conexión
+
 					close(client.send)
 					delete(h.clients, client)
 				}

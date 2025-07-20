@@ -1,4 +1,3 @@
-// main.go
 package main
 
 import (
@@ -12,7 +11,7 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true }, // Permitir todas las conexiones
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
@@ -34,29 +33,26 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		send:     make(chan []byte, 256),
 		username: username,
 	}
-	client.hub.register <- client // Registra el cliente en el hub
+	client.hub.register <- client
 
-	// Inicia las goroutines de lectura y escritura para este cliente
 	go client.writePump()
 	go client.readPump()
 }
 
 func main() {
 	hub := newHub()
-	go hub.run() // Inicia el hub en su propia goroutine
+	go hub.run()
 
-	// Servidor de archivos para el cliente web (index.html)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
 
-	// Manejador para las conexiones WebSocket
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
 
 	log.Println("Servidor de Chat iniciado en http://localhost:8080")
-	//err := http.ListenAndServe(":8080", nil)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

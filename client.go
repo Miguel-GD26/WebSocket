@@ -1,4 +1,3 @@
-// client.go
 package main
 
 import (
@@ -15,7 +14,6 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
-// Client es un intermediario entre la conexión WebSocket y el Hub.
 type Client struct {
 	hub      *Hub
 	conn     *websocket.Conn
@@ -23,7 +21,6 @@ type Client struct {
 	username string
 }
 
-// readPump lee mensajes del WebSocket y los envía al Hub.
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -42,7 +39,6 @@ func (c *Client) readPump() {
 		}
 
 		var msg Message
-		// Deserializamos solo para añadir la información del servidor
 		json.Unmarshal(rawMessage, &msg)
 		msg.Username = c.username
 		msg.Timestamp = time.Now()
@@ -53,7 +49,6 @@ func (c *Client) readPump() {
 	}
 }
 
-// writePump escribe mensajes del Hub al WebSocket.
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -65,14 +60,14 @@ func (c *Client) writePump() {
 		case message, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				// El Hub cerró el canal.
+
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 			c.conn.WriteMessage(websocket.TextMessage, message)
 
 		case <-ticker.C:
-			// Enviar un ping para mantener viva la conexión.
+
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
