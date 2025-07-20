@@ -184,8 +184,8 @@
     function connectWebSocket() {
       if (window.WebSocket) {
         const host = window.location.host;
-        ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(username)}`);
-
+       // ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(username)}`);
+        ws = new WebSocket("wss://" + location.host + "/ws?username=" + encodeURIComponent(username));
         ws.onopen = () => console.log("WebSocket conectado.");
 
         ws.onmessage = (event) => {
