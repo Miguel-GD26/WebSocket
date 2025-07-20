@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat en Tiempo Real con Go</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        #chat-window { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: scroll; background-color: #fff; border-radius: 8px; margin-bottom: 10px; }
+        .message { margin-bottom: 8px; padding: 8px; border-radius: 5px; }
+        .message .meta { font-size: 0.8em; color: #888; }
+        .message .content { margin-top: 4px; }
+        .my-message { background-color: #dcf8c6; align-self: flex-end; }
+        .other-message { background-color: #f1f1f1; }
+        .system-message { text-align: center; color: #888; font-style: italic; font-size: 0.9em; }
+        #controls { display: flex; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 15px; border: none; background-color: #007bff; color: white; cursor: pointer; border-radius: 5px; margin-left: 10px; }
+        button:hover { background-color: #0056b3; }
+        #login-container { text-align: center; margin-top: 50px; }
+        #chat-container { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="login-container">
+    <h2>Bienvenido al Chat</h2>
+    <input type="text" id="username" placeholder="Elige un nombre de usuario" required>
+    <button onclick="joinChat()">Unirse al Chat</button>
+</div>
+
+<div id="chat-container">
+    <h2>Go WebSocket Chat</h2>
+    <div id="chat-window"></div>
+    <form id="form" onsubmit="sendMessage(event)">
+        <input type="text" id="message" placeholder="Escribe un mensaje..." autocomplete="off" required>
+        <button>Enviar</button>
+    </form>
+</div>
+
+<script>
+    let ws;
+    let username = "";
+    const chatWindow = document.getElementById("chat-window");
+    const messageInput = document.getElementById("message");
+    const loginContainer = document.getElementById("login-container");
+    const chatContainer = document.getElementById("chat-container");
+    
+    function joinChat() {
+        const usernameInput = document.getElementById("username");
+        username = usernameInput.value.trim();
+        if (!username) {
+            alert("Por favor, introduce un nombre de usuario.");
+            return;
+        }
+
+        loginContainer.style.display = "none";
+        chatContainer.style.display = "block";
+        
+        connectWebSocket();
+    }
+
+    function connectWebSocket() {
+        if (window.WebSocket) {
+            const host = window.location.host;
+            ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(username)}`);
+
+            ws.onopen = function(event) {
+                console.log("Conexión WebSocket establecida.");
+            };
+
+            ws.onmessage = function(event) {
+                const msg = JSON.parse(event.data);
+                const messageElement = document.createElement("div");
+
+                messageElement.classList.add("message");
+                
+                if (msg.type === "chat_message") {
+                    messageElement.classList.add(msg.username === username ? "my-message" : "other-message");
+                    messageElement.innerHTML = `
+                        <div class="meta">${msg.username} - ${new Date(msg.timestamp).toLocaleTimeString()}</div>
+                        <div class="content">${msg.messageContent}</div>
+                    `;
+                } else if (msg.type === "user_join" || msg.type === "user_leave") {
+                     messageElement.classList.add("system-message");
+                     messageElement.textContent = `${msg.username} ${msg.messageContent}`;
+                }
+
+                chatWindow.appendChild(messageElement);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            };
+
+            ws.onclose = function(event) {
+                console.log("Conexión cerrada.");
+                addSystemMessage("Te has desconectado. Refresca la página para volver a unirte.");
+            };
+
+            ws.onerror = function(error) {
+                console.error("Error de WebSocket:", error);
+                addSystemMessage("Error de conexión. Intenta refrescar la página.");
+            };
+        } else {
+            alert("Tu navegador no soporta WebSockets.");
+        }
+    }
+
+    function sendMessage(event) {
+        event.preventDefault();
+        const messageContent = messageInput.value.trim();
+        if (messageContent && ws && ws.readyState === WebSocket.OPEN) {
+            const msg = {
+                messageContent: messageContent,
+            };
+            ws.send(JSON.stringify(msg));
+            messageInput.value = "";
+        }
+    }
+    
+    function addSystemMessage(text) {
+        const messageElement = document.createElement("div");
+        messageElement.classList.add("message", "system-message");
+        messageElement.textContent = text;
+        chatWindow.appendChild(messageElement);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
