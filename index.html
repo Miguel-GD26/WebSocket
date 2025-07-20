@@ -12,6 +12,9 @@
       --my-msg: #dcf8c6;
       --other-msg: #eaeaea;
       --system: #888;
+      --header-bg: #f0f0f0;
+      --header-text: #222;
+      --border-color: #ccc;
     }
 
     .dark-mode {
@@ -21,6 +24,9 @@
       --my-msg: #3e7f58;
       --other-msg: #444;
       --system: #aaa;
+      --header-bg: #1f1f1f;
+      --header-text: #eee;
+      --border-color: #444;
     }
 
     body {
@@ -33,9 +39,37 @@
       min-height: 100vh;
     }
 
-    h2 {
+    header.chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--header-bg);
+      color: var(--header-text);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 1.2rem;
       text-align: center;
-      margin: 20px 0;
+      flex: 1;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+    }
+
+    #mode-toggle {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1.3rem;
+      color: var(--header-text);
     }
 
     #login-container,
@@ -111,32 +145,50 @@
       background-color: #0056b3;
     }
 
-    #mode-toggle {
-      position: absolute;
-      right: 20px;
-      top: 20px;
-      cursor: pointer;
-      background: none;
-      border: 1px solid var(--text);
-      padding: 5px 10px;
-      border-radius: 5px;
-      font-size: 1em;
-      color: var(--text);
-    }
-
     @media (max-width: 600px) {
+      body {
+        font-size: 16px;
+        padding: 0 10px;
+      }
+
+      header h2 {
+        font-size: 1rem;
+      }
+
+      #chat-window {
+        height: 60vh;
+        padding: 8px;
+        font-size: 0.95em;
+      }
+
+      .meta {
+        font-size: 0.75em;
+      }
+
       form {
         flex-direction: column;
       }
 
+      input[type="text"],
       button {
         width: 100%;
+        font-size: 1em;
+      }
+
+      #mode-toggle {
+        padding: 6px 8px;
+        font-size: 1.2em;
       }
     }
   </style>
 </head>
 <body>
-  <button id="mode-toggle">🌙</button>
+
+  <header class="chat-header">
+    <div class="logo">💬</div>
+    <h2>Chat Global</h2>
+    <button id="mode-toggle" title="Cambiar modo">🌙</button>
+  </header>
 
   <div id="login-container">
     <h2>Bienvenido al Chat</h2>
@@ -145,7 +197,6 @@
   </div>
 
   <div id="chat-container" style="display: none;">
-    <h2>Chat en Tiempo Real</h2>
     <div id="chat-window"></div>
     <form id="form" onsubmit="sendMessage(event)">
       <input type="text" id="message" placeholder="Escribe un mensaje..." autocomplete="off" required />
@@ -156,6 +207,7 @@
   <script>
     let ws;
     let username = "";
+
     const chatWindow = document.getElementById("chat-window");
     const messageInput = document.getElementById("message");
     const loginContainer = document.getElementById("login-container");
@@ -182,37 +234,37 @@
     }
 
     function connectWebSocket() {
-      if (window.WebSocket) {
-        const host = window.location.host;
-       // ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(username)}`);
-        ws = new WebSocket("wss://" + location.host + "/ws?username=" + encodeURIComponent(username));
-        ws.onopen = () => console.log("WebSocket conectado.");
+      const protocol = location.protocol === "https:" ? "wss" : "ws";
+      const host = location.hostname === "localhost" ? "localhost:8080" : location.host;
+      ws = new WebSocket(`${protocol}://${host}/ws?username=${encodeURIComponent(username)}`);
 
-        ws.onmessage = (event) => {
-          const msg = JSON.parse(event.data);
-          const messageElement = document.createElement("div");
-          messageElement.classList.add("message");
+      ws.onopen = () => console.log("✅ Conectado al WebSocket.");
 
-          if (msg.type === "chat_message") {
-            messageElement.classList.add(msg.username === username ? "my-message" : "other-message");
-            messageElement.innerHTML = `
-              <div class="meta">${msg.username} - ${new Date(msg.timestamp).toLocaleTimeString()}</div>
-              <div class="content">${msg.messageContent}</div>
-            `;
-          } else if (msg.type === "user_join" || msg.type === "user_leave") {
-            messageElement.classList.add("system-message");
-            messageElement.textContent = `🔔 ${msg.username} ${msg.messageContent}`;
-          }
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        const messageElement = document.createElement("div");
+        messageElement.classList.add("message");
 
-          chatWindow.appendChild(messageElement);
-          chatWindow.scrollTop = chatWindow.scrollHeight;
-        };
+        if (msg.type === "chat_message") {
+          messageElement.classList.add(msg.username === username ? "my-message" : "other-message");
+          messageElement.innerHTML = `
+            <div class="meta">${msg.username} - ${new Date(msg.timestamp).toLocaleTimeString()}</div>
+            <div class="content">${msg.messageContent}</div>
+          `;
+        } else if (msg.type === "user_join" || msg.type === "user_leave") {
+          messageElement.classList.add("system-message");
+          messageElement.textContent = `🔔 ${msg.username} ${msg.messageContent}`;
+        }
 
-        ws.onclose = () => addSystemMessage("⚠️ Te has desconectado. Refresca la página.");
-        ws.onerror = (err) => addSystemMessage("❌ Error de conexión.");
-      } else {
-        alert("Tu navegador no soporta WebSockets.");
-      }
+        chatWindow.appendChild(messageElement);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      };
+
+      ws.onclose = () => addSystemMessage("⚠️ Te has desconectado. Refresca la página.");
+      ws.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        addSystemMessage("❌ Error de conexión.");
+      };
     }
 
     function sendMessage(event) {
