@@ -1,164 +1,189 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat WebSocket</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color-light: #f9f9f9;
-            --text-color-light: #1a1a1a;
-            --bg-color-dark: #1a1a1a;
-            --text-color-dark: #f9f9f9;
+            --bg-light: #f5f5f5;
+            --text-light: #222;
+            --bg-dark: #121212;
+            --text-dark: #eee;
+            --primary: #4f46e5;
         }
 
         body {
             margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg-color-light);
-            color: var(--text-color-light);
-            transition: background-color 0.3s, color 0.3s;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            transition: background 0.3s, color 0.3s;
         }
 
         body.dark {
-            background-color: var(--bg-color-dark);
-            color: var(--text-color-dark);
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-theme {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
         }
 
         .container {
-            max-width: 700px;
-            margin: 0 auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             padding: 1rem;
-        }
-
-        #login, #chat {
-            display: none;
-        }
-
-        #login.active, #chat.active {
-            display: block;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 0.6rem;
-            margin-bottom: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            max-width: 600px;
+            margin: auto;
         }
 
         #messages {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            height: 300px;
+            flex: 1;
             overflow-y: auto;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.05);
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
         .message {
-            margin-bottom: 8px;
+            padding: 0.6rem 1rem;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .message.you {
+            align-self: flex-end;
+            background-color: #4f46e5;
+            color: white;
+        }
+
+        .message.other {
+            align-self: flex-start;
+            background-color: #e4e4e4;
+        }
+
+        body.dark .message.other {
+            background-color: #333;
+            color: white;
         }
 
         form {
             display: flex;
             gap: 0.5rem;
-            margin-top: 10px;
         }
 
-        button {
-            padding: 0.6rem 1rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+        input, button {
+            padding: 0.5rem;
+            font-size: 1rem;
         }
 
-        #theme-toggle {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.3rem;
-            background: none;
+        #usernameInput {
+            width: 100%;
+            margin-bottom: 1rem;
         }
 
         @media (max-width: 600px) {
-            #messages {
-                height: 200px;
+            .container {
+                padding: 0.5rem;
+            }
+
+            form {
+                flex-direction: column;
             }
         }
     </style>
 </head>
 <body>
-    <button id="theme-toggle">🌙</button>
+    <header>
+        <span>💬 Chat WebSocket</span>
+        <button class="toggle-theme" id="toggleTheme">🌙</button>
+    </header>
 
     <div class="container">
-        <div id="login" class="active">
-            <h2>Ingresa tu nombre de usuario</h2>
-            <input type="text" id="username" placeholder="Tu nombre...">
-            <button onclick="joinChat()">Entrar al chat</button>
-        </div>
-
-        <div id="chat">
-            <h2>Chat en Tiempo Real</h2>
-            <div id="messages"></div>
-            <form id="message-form">
-                <input id="message" type="text" placeholder="Escribe tu mensaje..." autocomplete="off" />
-                <button type="submit">Enviar</button>
-            </form>
-        </div>
+        <input type="text" id="usernameInput" placeholder="Ingresa tu nombre de usuario" />
+        <div id="messages"></div>
+        <form id="chatForm">
+            <input type="text" id="messageInput" autocomplete="off" placeholder="Escribe un mensaje..." required />
+            <button type="submit">Enviar</button>
+        </form>
     </div>
 
     <script>
-        const loginDiv = document.getElementById('login');
-        const chatDiv = document.getElementById('chat');
+        const body = document.body;
+        const toggleBtn = document.getElementById('toggleTheme');
+        const usernameInput = document.getElementById('usernameInput');
         const messagesDiv = document.getElementById('messages');
-        const messageForm = document.getElementById('message-form');
-        const messageInput = document.getElementById('message');
-        const themeToggle = document.getElementById('theme-toggle');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
 
-        let socket;
+        let ws;
         let username = "";
 
-        function joinChat() {
-            const input = document.getElementById('username');
-            username = input.value.trim();
-            if (!username) return alert("Ingresa un nombre");
+        toggleBtn.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            toggleBtn.textContent = body.classList.contains('dark') ? '☀️' : '🌙';
+        });
 
-            socket = new WebSocket("wss://" + location.host + "/ws?username=" + encodeURIComponent(username));
-
-            socket.onmessage = (event) => {
-                const msg = document.createElement('div');
-                msg.className = "message";
-                msg.textContent = event.data;
-                messagesDiv.appendChild(msg);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            };
-
-            socket.onopen = () => {
-                loginDiv.classList.remove("active");
-                chatDiv.classList.add("active");
-            };
-
-            socket.onerror = (err) => {
-                alert("Error de conexión");
-                console.error(err);
-            };
-        }
-
-        messageForm.addEventListener("submit", function (e) {
+        chatForm.addEventListener('submit', e => {
             e.preventDefault();
-            if (messageInput.value.trim() && socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(messageInput.value.trim());
-                messageInput.value = "";
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const text = messageInput.value.trim();
+            if (text !== "") {
+                ws.send(text);
+                addMessage(text, 'you');
+                messageInput.value = '';
             }
         });
 
-        // Tema claro/oscuro
-        themeToggle.addEventListener("click", () => {
-            document.body.classList.toggle("dark");
-            themeToggle.textContent = document.body.classList.contains("dark") ? "🌞" : "🌙";
+        usernameInput.addEventListener('change', () => {
+            username = usernameInput.value.trim();
+            if (username !== "") {
+                connectWebSocket(username);
+                usernameInput.disabled = true;
+            }
         });
+
+        function connectWebSocket(username) {
+            ws = new WebSocket(`wss://${location.host}/ws?username=${encodeURIComponent(username)}`);
+
+            ws.onmessage = e => {
+                const msg = e.data;
+                addMessage(msg, 'other');
+            };
+
+            ws.onclose = () => {
+                addMessage("🔌 Conexión cerrada", 'other');
+            };
+        }
+
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.classList.add('message', type);
+            div.textContent = text;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
     </script>
 </body>
 </html>
