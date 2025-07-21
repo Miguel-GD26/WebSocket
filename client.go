@@ -38,7 +38,6 @@ func (c *Client) readPump() {
 			break
 		}
 
-		// El cliente solo envía el contenido del mensaje, el servidor añade el resto.
 		var msgContent struct {
 			MessageContent string `json:"messageContent"`
 		}
@@ -47,7 +46,6 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		// Se construye el mensaje completo en el servidor
 		fullMsg := Message{
 			Type:           "chat_message",
 			Username:       c.username,
@@ -61,7 +59,6 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		// CORRECCIÓN: Se envía el mensaje como []byte directamente, sin la struct de broadcast.
 		c.room.broadcast <- processedMessage
 	}
 }

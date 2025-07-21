@@ -3,17 +3,16 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 )
 
-// CORRECCIÓN: Se eliminó la `struct broadcastMessage` al ser innecesaria.
-
 type ChatRoom struct {
 	clients map[*Client]bool
-	// CORRECCIÓN: Se eliminó `clientsMutex sync.Mutex` porque la serialización
-	// a través de canales en la goroutine `run` ya previene las condiciones de carrera.
 
-	broadcast  chan []byte // CORRECCIÓN: Canal de tipo `[]byte` para simplicidad.
+	clientsMutex sync.RWMutex
+
+	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
 	quit       chan bool
@@ -22,7 +21,7 @@ type ChatRoom struct {
 func newChatRoom() *ChatRoom {
 	return &ChatRoom{
 		clients:    make(map[*Client]bool),
-		broadcast:  make(chan []byte, 256), // Canal de `[]byte`
+		broadcast:  make(chan []byte, 256),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		quit:       make(chan bool),
@@ -33,45 +32,46 @@ func (r *ChatRoom) run() {
 	for {
 		select {
 		case client := <-r.register:
-			// No se necesita Mutex aquí.
+			r.clientsMutex.Lock()
 			r.clients[client] = true
+			r.clientsMutex.Unlock()
+
 			log.Printf("Cliente %s conectado.", client.username)
 
 			joinMsg := Message{Type: "user_join", Username: client.username, MessageContent: "se ha unido al chat.", Timestamp: time.Now()}
 			jsonMsg, _ := json.Marshal(joinMsg)
-			// Se envía el mensaje de unión a todos, incluido el nuevo cliente.
 			r.broadcast <- jsonMsg
 
 		case client := <-r.unregister:
-			// No se necesita Mutex aquí.
+			r.clientsMutex.Lock()
 			if _, ok := r.clients[client]; ok {
 				close(client.send)
 				delete(r.clients, client)
-				log.Printf("Cliente %s desconectado.", client.username)
 
 				leaveMsg := Message{Type: "user_leave", Username: client.username, MessageContent: "ha abandonado el chat.", Timestamp: time.Now()}
 				jsonMsg, _ := json.Marshal(leaveMsg)
 				r.broadcast <- jsonMsg
 			}
+			r.clientsMutex.Unlock()
+			log.Printf("Cliente %s desconectado.", client.username)
 
 		case message := <-r.broadcast:
-			// No se necesita Mutex aquí.
-			// La lógica de broadcast es ahora mucho más simple.
-			// Envía el mensaje a TODOS los clientes conectados.
+			r.clientsMutex.RLock()
 			for client := range r.clients {
 				select {
 				case client.send <- message:
 				default:
 					log.Printf("Canal de envío lleno para el cliente %s. Mensaje descartado.", client.username)
-					// Opcionalmente, se podría cerrar la conexión aquí.
 				}
 			}
+			r.clientsMutex.RUnlock()
 
 		case <-r.quit:
-			// No se necesita Mutex aquí.
+			r.clientsMutex.Lock()
 			for client := range r.clients {
 				close(client.send)
 			}
+			r.clientsMutex.Unlock()
 			return
 		}
 	}
