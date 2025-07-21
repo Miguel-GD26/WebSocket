@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"html"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -57,11 +61,11 @@ func main() {
 	room := newChatRoom()
 	go room.run()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
-
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(room, w, r)
 	})
 
@@ -70,9 +74,32 @@ func main() {
 		port = "8080"
 	}
 
-	log.Println("Servidor de Chat iniciado en http://localhost:" + port)
-	err := http.ListenAndServe(":"+port, nil)
-	if err != nil {
-		log.Fatalf("Error fatal al iniciar servidor: %v", err)
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
 	}
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		log.Println("Servidor de Chat iniciado en http://localhost:" + port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Error al iniciar servidor: %v", err)
+		}
+	}()
+
+	<-stop
+	log.Println("\nApagando servidor...")
+
+	close(room.quit)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Error en apagado del servidor: %v", err)
+	}
+
+	log.Println("Servidor apagado correctamente.")
 }
