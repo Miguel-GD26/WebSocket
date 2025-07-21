@@ -78,7 +78,6 @@
         messageElement.classList.add("message");
 
         if (msg.type === "chat_message") {
-            // Se usa el 'username' global para determinar si es "mi" mensaje.
             messageElement.classList.add(msg.username === username ? "my-message" : "other-message");
             messageElement.innerHTML = `
                 <div class="meta">${escapeHTML(msg.username)} - ${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
@@ -123,8 +122,6 @@
 
       ws.onopen = () => console.log("✅ Conectado al WebSocket.");
 
-      // CORRECCIÓN: Manejador de mensajes único y simple.
-      // Siempre renderiza lo que el servidor envía.
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         addMessageToChat(msg);
@@ -142,14 +139,9 @@
         const messageContent = messageInput.value.trim();
         if (messageContent && ws && ws.readyState === WebSocket.OPEN) {
             
-            // CORRECCIÓN: Solo se envía el contenido. El servidor construye el resto.
             const messageToSend = { messageContent: messageContent };
             
             ws.send(JSON.stringify(messageToSend));
-
-            // CORRECCIÓN: Se eliminó la renderización "optimista".
-            // El mensaje propio se mostrará cuando vuelva del servidor vía ws.onmessage.
-            // Esto garantiza que la vista del chat sea consistente para todos los usuarios.
             
             messageInput.value = "";
             messageInput.focus();
