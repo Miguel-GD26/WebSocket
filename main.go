@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/gorilla/websocket"
@@ -11,10 +12,20 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		return u.Host == r.Host
+	},
 }
 
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func serveWs(room *ChatRoom, w http.ResponseWriter, r *http.Request) {
 	username := r.URL.Query().Get("username")
 	if username == "" {
 		http.Error(w, "Se requiere el parámetro 'username'", http.StatusBadRequest)
@@ -23,41 +34,39 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Printf("error al actualizar a websocket: %v", err)
 		return
 	}
 
 	client := &Client{
-		hub:      hub,
+		room:     room,
 		conn:     conn,
 		send:     make(chan []byte, 256),
 		username: username,
 	}
-	client.hub.register <- client
+	client.room.register <- client
 
 	go client.writePump()
 	go client.readPump()
 }
 
 func main() {
-	hub := newHub()
-	go hub.run()
+	room := newChatRoom()
+	go room.run()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		serveWs(room, w, r)
 	})
-
-	log.Println("Servidor de Chat iniciado en http://localhost:8080")
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	log.Println("Servidor iniciado en http://localhost:" + port)
+	log.Println("Servidor de Chat iniciado en http://localhost:" + port)
 	err := http.ListenAndServe(":"+port, nil)
 
 	if err != nil {

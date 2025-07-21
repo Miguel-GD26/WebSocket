@@ -15,7 +15,7 @@ const (
 )
 
 type Client struct {
-	hub      *Hub
+	room     *ChatRoom
 	conn     *websocket.Conn
 	send     chan []byte
 	username string
@@ -23,7 +23,7 @@ type Client struct {
 
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.room.unregister <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -33,19 +33,28 @@ func (c *Client) readPump() {
 		_, rawMessage, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				log.Printf("error de websocket inesperado: %v", err)
 			}
 			break
 		}
 
 		var msg Message
-		json.Unmarshal(rawMessage, &msg)
+		if err := json.Unmarshal(rawMessage, &msg); err != nil {
+			log.Printf("error al decodificar mensaje JSON de %s: %v", c.username, err)
+			continue
+		}
+
 		msg.Username = c.username
 		msg.Timestamp = time.Now()
 		msg.Type = "chat_message"
 
-		processedMessage, _ := json.Marshal(msg)
-		c.hub.broadcast <- processedMessage
+		processedMessage, err := json.Marshal(msg)
+		if err != nil {
+			log.Printf("error al codificar mensaje de %s: %v", c.username, err)
+			continue
+		}
+
+		c.room.broadcast <- &broadcastMessage{data: processedMessage, sender: c}
 	}
 }
 
@@ -60,14 +69,12 @@ func (c *Client) writePump() {
 		case message, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 			c.conn.WriteMessage(websocket.TextMessage, message)
 
 		case <-ticker.C:
-
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
