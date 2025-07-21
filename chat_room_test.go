@@ -92,13 +92,11 @@ func TestChatRoomBroadcastWithSlowClient(t *testing.T) {
 	drainChannel(normalClient.send)
 	drainChannel(slowClient.send)
 
-	// Llenar el buffer del cliente lento
 	slowClient.send <- []byte("blocker")
-	// Enviar el mensaje que disparará la desconexión
+
 	triggerMsg := []byte("trigger message")
 	room.broadcast <- &broadcastMessage{data: triggerMsg, sender: nil}
 
-	// Esperar de forma robusta a que el cliente sea eliminado
 	success := false
 	for i := 0; i < 20; i++ {
 		room.clientsRWMutex.RLock()
@@ -115,7 +113,6 @@ func TestChatRoomBroadcastWithSlowClient(t *testing.T) {
 		t.Fatal("La prueba falló: el cliente lento no fue desconectado a tiempo.")
 	}
 
-	// Verificar que el cliente normal recibió el mensaje de trigger
 	select {
 	case msg := <-normalClient.send:
 		if string(msg) != string(triggerMsg) {
@@ -125,7 +122,6 @@ func TestChatRoomBroadcastWithSlowClient(t *testing.T) {
 		t.Fatal("El cliente normal no recibió el mensaje de trigger.")
 	}
 
-	// Verificar que NO hay más mensajes (no debe haber mensaje de 'leave')
 	select {
 	case unexpectedMsg := <-normalClient.send:
 		t.Errorf("Se recibió un mensaje inesperado: %s", string(unexpectedMsg))
@@ -135,7 +131,6 @@ func TestChatRoomBroadcastWithSlowClient(t *testing.T) {
 }
 
 func TestChatRoomConcurrency_RaceCondition(t *testing.T) {
-	// Esta prueba solo verifica que no haya deadlocks ni data races bajo carga.
 	room := newChatRoom()
 	go room.run()
 	defer func() { room.quit <- true }()

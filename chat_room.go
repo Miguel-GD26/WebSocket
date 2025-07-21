@@ -45,7 +45,6 @@ func (r *ChatRoom) run() {
 			r.broadcast <- &broadcastMessage{data: jsonMsg, sender: nil}
 
 		case client := <-r.unregister:
-			// Este case ahora es solo para desconexiones limpias iniciadas por el cliente.
 			r.clientsRWMutex.Lock()
 			if _, ok := r.clients[client]; ok {
 				delete(r.clients, client)
@@ -66,14 +65,11 @@ func (r *ChatRoom) run() {
 				select {
 				case client.send <- message.data:
 				default:
-					// Recopilar cliente lento para su eliminación.
 					clientsToUnregister[client] = true
 				}
 			}
 			r.clientsRWMutex.RUnlock()
 
-			// Si hay clientes lentos, eliminarlos directamente.
-			// Esto se hace después de liberar el RLock para poder adquirir un Lock completo.
 			if len(clientsToUnregister) > 0 {
 				r.clientsRWMutex.Lock()
 				for client := range clientsToUnregister {
@@ -81,7 +77,6 @@ func (r *ChatRoom) run() {
 						delete(r.clients, client)
 						close(client.send)
 						log.Printf("Cliente lento %s desconectado forzosamente.", client.username)
-						// No se difunde un mensaje de "abandono" aquí para evitar complejidad.
 					}
 				}
 				r.clientsRWMutex.Unlock()
