@@ -38,23 +38,31 @@ func (c *Client) readPump() {
 			break
 		}
 
-		var msg Message
-		if err := json.Unmarshal(rawMessage, &msg); err != nil {
+		// El cliente solo envía el contenido del mensaje, el servidor añade el resto.
+		var msgContent struct {
+			MessageContent string `json:"messageContent"`
+		}
+		if err := json.Unmarshal(rawMessage, &msgContent); err != nil {
 			log.Printf("error al decodificar mensaje JSON de %s: %v", c.username, err)
 			continue
 		}
 
-		msg.Username = c.username
-		msg.Timestamp = time.Now()
-		msg.Type = "chat_message"
+		// Se construye el mensaje completo en el servidor
+		fullMsg := Message{
+			Type:           "chat_message",
+			Username:       c.username,
+			MessageContent: msgContent.MessageContent,
+			Timestamp:      time.Now(),
+		}
 
-		processedMessage, err := json.Marshal(msg)
+		processedMessage, err := json.Marshal(fullMsg)
 		if err != nil {
 			log.Printf("error al codificar mensaje de %s: %v", c.username, err)
 			continue
 		}
 
-		c.room.broadcast <- &broadcastMessage{data: processedMessage, sender: c}
+		// CORRECCIÓN: Se envía el mensaje como []byte directamente, sin la struct de broadcast.
+		c.room.broadcast <- processedMessage
 	}
 }
 

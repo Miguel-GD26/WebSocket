@@ -6,180 +6,31 @@
   <title>Chat en Tiempo Real con Go</title>
   <style>
     :root {
-      --bg: #f4f4f9;
-      --text: #222;
-      --chat-bg: #fff;
-      --my-msg: #dcf8c6;
-      --other-msg: #eaeaea;
-      --system: #888;
-      --header-bg: #f0f0f0;
-      --header-text: #222;
-      --border-color: #ccc;
+      --bg: #f4f4f9; --text: #222; --chat-bg: #fff; --my-msg: #dcf8c6;
+      --other-msg: #eaeaea; --system: #888; --header-bg: #f0f0f0;
+      --header-text: #222; --border-color: #ccc;
     }
-
     .dark-mode {
-      --bg: #1e1e1e;
-      --text: #f0f0f0;
-      --chat-bg: #2c2c2c;
-      --my-msg: #3e7f58;
-      --other-msg: #444;
-      --system: #aaa;
-      --header-bg: #1f1f1f;
-      --header-text: #eee;
-      --border-color: #444;
+      --bg: #1e1e1e; --text: #f0f0f0; --chat-bg: #2c2c2c; --my-msg: #3e7f58;
+      --other-msg: #444; --system: #aaa; --header-bg: #1f1f1f;
+      --header-text: #eee; --border-color: #444;
     }
-
-    body {
-      font-family: "Segoe UI", sans-serif;
-      margin: 0;
-      background-color: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    header.chat-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.75rem 1rem;
-      background: var(--header-bg);
-      color: var(--header-text);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    header h2 {
-      margin: 0;
-      font-size: 1.2rem;
-      text-align: center;
-      flex: 1;
-    }
-
-    .logo {
-      font-size: 1.5rem;
-    }
-
-    #mode-toggle {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      font-size: 1.3rem;
-      color: var(--header-text);
-    }
-
-    #login-container,
-    #chat-container {
-      max-width: 600px;
-      margin: auto;
-      padding: 1em;
-    }
-
-    #chat-window {
-      border: 1px solid #ccc;
-      height: 400px;
-      overflow-y: auto;
-      background-color: var(--chat-bg);
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-
-    .message {
-      margin-bottom: 8px;
-      padding: 8px;
-      border-radius: 5px;
-    }
-
-    .my-message {
-      background-color: var(--my-msg);
-      text-align: right;
-    }
-
-    .other-message {
-      background-color: var(--other-msg);
-    }
-
-    .system-message {
-      text-align: center;
-      font-style: italic;
-      color: var(--system);
-      font-size: 0.9em;
-    }
-
-    .meta {
-      font-size: 0.8em;
-      color: var(--system);
-    }
-
-    .content {
-      margin-top: 4px;
-    }
-
-    form {
-      display: flex;
-      gap: 10px;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    @media (max-width: 600px) {
-      body {
-        font-size: 16px;
-        padding: 0 10px;
-      }
-
-      header h2 {
-        font-size: 1rem;
-      }
-
-      #chat-window {
-        height: 60vh;
-        padding: 8px;
-        font-size: 0.95em;
-      }
-
-      .meta {
-        font-size: 0.75em;
-      }
-
-      form {
-        flex-direction: column;
-      }
-
-      input[type="text"],
-      button {
-        width: 100%;
-        font-size: 1em;
-      }
-
-      #mode-toggle {
-        padding: 6px 8px;
-        font-size: 1.2em;
-      }
-    }
+    body { font-family: "Segoe UI", sans-serif; margin: 0; background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+    header.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--header-bg); color: var(--header-text); border-bottom: 1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 100; }
+    header h2 { margin: 0; font-size: 1.2rem; text-align: center; flex: 1; }
+    .logo { font-size: 1.5rem; }
+    #mode-toggle { background: transparent; border: none; cursor: pointer; font-size: 1.3rem; color: var(--header-text); }
+    #login-container, #chat-container { max-width: 600px; margin: auto; padding: 1em; width: 90%; }
+    #chat-window { border: 1px solid var(--border-color); height: 65vh; overflow-y: auto; background-color: var(--chat-bg); border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; }
+    .message { max-width: 80%; padding: 8px 12px; border-radius: 18px; margin-bottom: 8px; word-wrap: break-word; }
+    .my-message { background-color: var(--my-msg); align-self: flex-end; }
+    .other-message { background-color: var(--other-msg); align-self: flex-start; }
+    .system-message { text-align: center; font-style: italic; color: var(--system); font-size: 0.9em; align-self: center; background: none; }
+    .meta { font-size: 0.8em; color: var(--system); margin-bottom: 4px; font-weight: bold; }
+    form { display: flex; gap: 10px; }
+    input[type="text"] { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid var(--border-color); background-color: var(--chat-bg); color: var(--text); }
+    button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
   </style>
 </head>
 <body>
@@ -192,8 +43,10 @@
 
   <div id="login-container">
     <h2>Bienvenido al Chat</h2>
-    <input type="text" id="username" placeholder="Elige un nombre de usuario" required />
-    <button onclick="joinChat()">Unirse al Chat</button>
+    <form onsubmit="joinChat(event)">
+      <input type="text" id="username" placeholder="Elige un nombre de usuario" required />
+      <button>Unirse</button>
+    </form>
   </div>
 
   <div id="chat-container" style="display: none;">
@@ -214,12 +67,42 @@
     const chatContainer = document.getElementById("chat-container");
     const modeToggle = document.getElementById("mode-toggle");
 
+    function escapeHTML(str) {
+        const p = document.createElement("p");
+        p.appendChild(document.createTextNode(str));
+        return p.innerHTML;
+    }
+    
+    function addMessageToChat(msg) {
+        const messageElement = document.createElement("div");
+        messageElement.classList.add("message");
+
+        if (msg.type === "chat_message") {
+            // Se usa el 'username' global para determinar si es "mi" mensaje.
+            messageElement.classList.add(msg.username === username ? "my-message" : "other-message");
+            messageElement.innerHTML = `
+                <div class="meta">${escapeHTML(msg.username)} - ${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                <div class="content">${escapeHTML(msg.messageContent)}</div>
+            `;
+        } else if (msg.type === "user_join" || msg.type === "user_leave") {
+            messageElement.classList.add("system-message");
+            messageElement.textContent = `🔔 ${escapeHTML(msg.username)} ${msg.messageContent}`;
+        } else {
+             messageElement.classList.add("system-message");
+             messageElement.textContent = escapeHTML(msg.messageContent);
+        }
+
+        chatWindow.appendChild(messageElement);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+    
     modeToggle.addEventListener("click", () => {
       document.body.classList.toggle("dark-mode");
       modeToggle.textContent = document.body.classList.contains("dark-mode") ? "🌞" : "🌙";
     });
 
-    function joinChat() {
+    function joinChat(event) {
+      event.preventDefault();
       const usernameInput = document.getElementById("username");
       username = usernameInput.value.trim();
       if (!username) {
@@ -229,7 +112,7 @@
 
       loginContainer.style.display = "none";
       chatContainer.style.display = "block";
-
+      messageInput.focus();
       connectWebSocket();
     }
 
@@ -240,48 +123,37 @@
 
       ws.onopen = () => console.log("✅ Conectado al WebSocket.");
 
+      // CORRECCIÓN: Manejador de mensajes único y simple.
+      // Siempre renderiza lo que el servidor envía.
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        const messageElement = document.createElement("div");
-        messageElement.classList.add("message");
-
-        if (msg.type === "chat_message") {
-          messageElement.classList.add(msg.username === username ? "my-message" : "other-message");
-          messageElement.innerHTML = `
-            <div class="meta">${msg.username} - ${new Date(msg.timestamp).toLocaleTimeString()}</div>
-            <div class="content">${msg.messageContent}</div>
-          `;
-        } else if (msg.type === "user_join" || msg.type === "user_leave") {
-          messageElement.classList.add("system-message");
-          messageElement.textContent = `🔔 ${msg.username} ${msg.messageContent}`;
-        }
-
-        chatWindow.appendChild(messageElement);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+        addMessageToChat(msg);
       };
 
-      ws.onclose = () => addSystemMessage("⚠️ Te has desconectado. Refresca la página.");
+      ws.onclose = () => addMessageToChat({ type: 'system', messageContent: "⚠️ Te has desconectado. Refresca la página para volver a conectar."});
       ws.onerror = (err) => {
         console.error("WebSocket error:", err);
-        addSystemMessage("❌ Error de conexión.");
+        addMessageToChat({ type: 'system', messageContent: "❌ Error de conexión. Intenta refrescar la página."});
       };
     }
 
     function sendMessage(event) {
-      event.preventDefault();
-      const messageContent = messageInput.value.trim();
-      if (messageContent && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ messageContent }));
-        messageInput.value = "";
-      }
-    }
+        event.preventDefault();
+        const messageContent = messageInput.value.trim();
+        if (messageContent && ws && ws.readyState === WebSocket.OPEN) {
+            
+            // CORRECCIÓN: Solo se envía el contenido. El servidor construye el resto.
+            const messageToSend = { messageContent: messageContent };
+            
+            ws.send(JSON.stringify(messageToSend));
 
-    function addSystemMessage(text) {
-      const messageElement = document.createElement("div");
-      messageElement.classList.add("message", "system-message");
-      messageElement.textContent = text;
-      chatWindow.appendChild(messageElement);
-      chatWindow.scrollTop = chatWindow.scrollHeight;
+            // CORRECCIÓN: Se eliminó la renderización "optimista".
+            // El mensaje propio se mostrará cuando vuelva del servidor vía ws.onmessage.
+            // Esto garantiza que la vista del chat sea consistente para todos los usuarios.
+            
+            messageInput.value = "";
+            messageInput.focus();
+        }
     }
   </script>
 </body>
